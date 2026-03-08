@@ -1,165 +1,105 @@
-/**
- * 生成 ContextRoller 封面图
- * 尺寸: 1200×630px (Open Graph 标准)
- * 风格: GitHub 暗色主题
- */
-
 const { createCanvas } = require('canvas');
 const fs = require('fs');
 const path = require('path');
 
-const WIDTH = 1200;
-const HEIGHT = 630;
+// 创建1200x630px封面图
+const width = 1200;
+const height = 630;
 
-// GitHub 暗色主题配色
-const COLORS = {
-  bg: '#0d1117',
-  bgSecondary: '#161b22',
-  border: '#30363d',
-  text: '#f0f6fc',
-  textMuted: '#8b949e',
-  accent: '#58a6ff',
-  accentGreen: '#3fb950',
-  accentPurple: '#a371f7'
-};
-
-// 创建画布
-const canvas = createCanvas(WIDTH, HEIGHT);
+const canvas = createCanvas(width, height);
 const ctx = canvas.getContext('2d');
 
-// 背景
-ctx.fillStyle = COLORS.bg;
-ctx.fillRect(0, 0, WIDTH, HEIGHT);
+// 背景色 #0d1117 (GitHub暗色)
+ctx.fillStyle = '#0d1117';
+ctx.fillRect(0, 0, width, height);
 
-// 绘制装饰性网格
-ctx.strokeStyle = COLORS.border;
-ctx.lineWidth = 1;
-ctx.globalAlpha = 0.3;
+// 渐变装饰
+const gradient = ctx.createLinearGradient(0, 0, width, height);
+gradient.addColorStop(0, 'rgba(56, 139, 253, 0.15)');
+gradient.addColorStop(0.5, 'rgba(46, 160, 67, 0.1)');
+gradient.addColorStop(1, 'rgba(56, 139, 253, 0.05)');
+ctx.fillStyle = gradient;
+ctx.fillRect(0, 0, width, height);
 
-const gridSize = 40;
-for (let x = 0; x < WIDTH; x += gridSize) {
-  ctx.beginPath();
-  ctx.moveTo(x, 0);
-  ctx.lineTo(x, HEIGHT);
-  ctx.stroke();
-}
-for (let y = 0; y < HEIGHT; y += gridSize) {
-  ctx.beginPath();
-  ctx.moveTo(0, y);
-  ctx.lineTo(WIDTH, y);
-  ctx.stroke();
-}
-ctx.globalAlpha = 1;
+// 右侧装饰圆环
+ctx.strokeStyle = '#388bfd';
+ctx.lineWidth = 3;
+ctx.beginPath();
+ctx.arc(950, 200, 120, 0, Math.PI * 2);
+ctx.stroke();
 
-// 绘制装饰性圆环
-ctx.strokeStyle = COLORS.accent;
+ctx.strokeStyle = '#2ea043';
 ctx.lineWidth = 2;
-ctx.globalAlpha = 0.15;
 ctx.beginPath();
-ctx.arc(WIDTH * 0.85, HEIGHT * 0.2, 100, 0, Math.PI * 2);
+ctx.arc(950, 200, 80, 0, Math.PI * 2);
 ctx.stroke();
 
-ctx.strokeStyle = COLORS.accentPurple;
+// 中心圆点
+ctx.fillStyle = '#388bfd';
 ctx.beginPath();
-ctx.arc(WIDTH * 0.15, HEIGHT * 0.8, 80, 0, Math.PI * 2);
-ctx.stroke();
-ctx.globalAlpha = 1;
-
-// 绘制主标题背景卡片
-const cardX = 100;
-const cardY = 120;
-const cardW = 1000;
-const cardH = 390;
-
-// 卡片阴影
-ctx.fillStyle = 'rgba(0,0,0,0.3)';
-ctx.fillRect(cardX + 8, cardY + 8, cardW, cardH);
-
-// 卡片主体
-ctx.fillStyle = COLORS.bgSecondary;
-ctx.fillRect(cardX, cardY, cardW, cardH);
-
-// 卡片边框
-ctx.strokeStyle = COLORS.border;
-ctx.lineWidth = 2;
-ctx.strokeRect(cardX, cardY, cardW, cardH);
-
-// 绘制 Logo 图标（滚轮概念）
-const logoX = cardX + 80;
-const logoY = cardY + 80;
-const logoSize = 80;
-
-// 外圈
-ctx.strokeStyle = COLORS.accent;
-ctx.lineWidth = 6;
-ctx.beginPath();
-ctx.arc(logoX, logoY, logoSize / 2, 0, Math.PI * 2);
-ctx.stroke();
-
-// 内圈（表示循环）
-ctx.strokeStyle = COLORS.accentGreen;
-ctx.lineWidth = 4;
-ctx.beginPath();
-ctx.arc(logoX, logoY, logoSize / 3, 0.5, Math.PI * 1.5);
-ctx.stroke();
-
-// 箭头（表示方向）
-ctx.fillStyle = COLORS.accentGreen;
-ctx.beginPath();
-ctx.moveTo(logoX + logoSize/3 - 5, logoY - logoSize/3 + 10);
-ctx.lineTo(logoX + logoSize/3 + 10, logoY - logoSize/3);
-ctx.lineTo(logoX + logoSize/3 - 5, logoY - logoSize/3 - 10);
-ctx.closePath();
+ctx.arc(950, 200, 20, 0, Math.PI * 2);
 ctx.fill();
 
+// 左侧装饰线
+ctx.strokeStyle = '#388bfd';
+ctx.lineWidth = 4;
+ctx.beginPath();
+ctx.moveTo(60, 200);
+ctx.lineTo(60, 430);
+ctx.stroke();
+
+ctx.strokeStyle = '#2ea043';
+ctx.lineWidth = 3;
+ctx.beginPath();
+ctx.moveTo(85, 250);
+ctx.lineTo(85, 380);
+ctx.stroke();
+
 // 主标题
-ctx.fillStyle = COLORS.text;
-ctx.font = 'bold 72px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
-ctx.textAlign = 'left';
-ctx.fillText('ContextRoller', logoX + 60, logoY + 25);
+ctx.fillStyle = '#ffffff';
+ctx.font = 'bold 68px "DejaVu Sans", sans-serif';
+ctx.textAlign = 'center';
+ctx.fillText('ContextRoller', width / 2 - 100, 260);
 
 // 副标题
-ctx.fillStyle = COLORS.textMuted;
-ctx.font = '32px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
-ctx.fillText('AI 会话上下文管理器', logoX, logoY + 100);
+ctx.fillStyle = '#8b949e';
+ctx.font = '32px "DejaVu Sans", sans-serif';
+ctx.fillText('AI Session Context Manager', width / 2 - 100, 330);
 
-// 描述语
-ctx.fillStyle = COLORS.textMuted;
-ctx.font = '24px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
-ctx.fillText('永不丢失的 Claude / Cursor 开发会话', logoX, logoY + 150);
+// 描述
+ctx.fillStyle = '#58a6ff';
+ctx.font = '22px "DejaVu Sans", sans-serif';
+ctx.fillText('Never lose your AI conversation context again', width / 2 - 100, 390);
 
-// 绘制特性列表
-const features = [
-  '✓ Session Snapshot  会话快照',
-  '✓ Smart Compression  智能压缩',
-  '✓ Context Tags  上下文标签',
-  '✓ MCP Server  MCP 集成'
-];
-
-let featureY = logoY + 210;
-ctx.font = '22px "SF Mono", Monaco, monospace';
-
-features.forEach((feature, i) => {
-  const x = logoX + (i % 2) * 400;
-  const y = featureY + Math.floor(i / 2) * 45;
+// 底部标签背景
+const drawTag = (x, y, w, h, text) => {
+  ctx.fillStyle = '#21262d';
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 1;
   
-  // 特性颜色
-  ctx.fillStyle = COLORS.accentGreen;
-  ctx.fillText('✓', x, y);
+  // 圆角矩形
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, 8);
+  ctx.fill();
+  ctx.stroke();
   
-  ctx.fillStyle = COLORS.textMuted;
-  ctx.fillText(feature.slice(2), x + 25, y);
-});
+  // 文字
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '16px "DejaVu Sans", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(text, x + w / 2, y + h / 2 + 5);
+};
 
-// 底部信息
-const footerY = HEIGHT - 50;
-ctx.fillStyle = COLORS.textMuted;
-ctx.font = '20px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
-ctx.textAlign = 'center';
-ctx.fillText('github.com/YaBoom/ContextRoller-zyt', WIDTH / 2, footerY);
+drawTag(320, 480, 140, 36, 'TypeScript');
+drawTag(480, 480, 110, 36, 'Node.js');
+drawTag(610, 480, 130, 36, 'MCP Server');
+drawTag(760, 480, 100, 36, 'CLI');
 
-// 保存为 JPG
-const buffer = canvas.toBuffer('image/jpeg', { quality: 0.92 });
-fs.writeFileSync(path.join(__dirname, 'cover.jpg'), buffer);
+// 保存为JPG
+const buffer = canvas.toBuffer('image/jpeg', { quality: 0.95 });
+const outputPath = path.join(__dirname, '..', 'cover.jpg');
+fs.writeFileSync(outputPath, buffer);
 
-console.log('✓ 封面图已生成: cover.jpg (1200×630px)');
+console.log('✅ Cover image generated successfully!');
+console.log('Path:', outputPath);
+console.log('Size:', (fs.statSync(outputPath).size / 1024).toFixed(1), 'KB');
