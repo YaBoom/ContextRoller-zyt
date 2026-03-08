@@ -1,0 +1,10 @@
+.ctxr/
+  sessions/           # 会话快照存储
+  compression/        # 压缩后的上下文
+  tags/              # 用户定义的标签
+  ctxr.db            # SQLite数据库
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
