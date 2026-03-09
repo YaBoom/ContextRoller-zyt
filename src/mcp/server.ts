@@ -9,10 +9,10 @@
  * - [ ] 支持流式响应
  */
 
-import { SessionStorage } from './core/storage.js';
-import { SessionParser } from './core/parser.js';
-import { ContextCompressor } from './core/compressor.js';
-import { SessionSnapshot, CompressedContext, ContextTag } from './core/types.js';
+import { SessionStorage } from '../core/storage.js';
+import { SessionParser } from '../core/parser.js';
+import { ContextCompressor } from '../core/compressor.js';
+import { SessionSnapshot, CompressedContext, ContextTag } from '../core/types.js';
 
 // MCP Tool 定义
 interface MCPTool {
@@ -221,7 +221,7 @@ export class ContextRollerMCPServer {
     const sessions = await this.storage.listSessions(args.limit || 10);
     
     return {
-      sessions: sessions.map(s => ({
+      sessions: sessions.map((s: SessionSnapshot) => ({
         id: s.id,
         name: s.name,
         created_at: new Date(s.created_at).toISOString(),
@@ -270,7 +270,7 @@ export class ContextRollerMCPServer {
       preserveLastN: 10
     });
 
-    const recentMessages = session.messages.slice(-5).map(m => ({
+    const recentMessages = session.messages.slice(-5).map((m: { role: string; content: string }) => ({
       role: m.role,
       content: m.content.slice(0, 500) + (m.content.length > 500 ? '...' : '')
     }));
@@ -331,7 +331,7 @@ export class ContextRollerMCPServer {
     const sessions = await this.storage.searchSessions(args.query);
     
     return {
-      results: sessions.map(s => ({
+      results: sessions.map((s: SessionSnapshot) => ({
         id: s.id,
         name: s.name,
         relevance: 1.0 // 简化处理

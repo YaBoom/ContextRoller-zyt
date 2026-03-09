@@ -1,48 +1,64 @@
 /**
  * SessionStorage - 会话存储管理
  * 
- * 使用SQLite作为后端存储，提供高效的会话CRUD操作
+ * 使用 sql.js (纯 JavaScript SQLite) 作为后端存储，无需编译
  * 
  * TODO:
  * - [ ] 添加索引优化查询性能
- * - [ ] 支持数据导出为JSON格式
+ * - [ ] 支持数据导出为 JSON 格式
  * - [ ] 实现自动清理旧会话的策略
  */
 
-import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
+import initSqlJs, { Database } from 'sql.js';
 import { SessionSnapshot, ContextTag, CompressedContext } from './types.js';
 import { join } from 'path';
 import { homedir } from 'os';
-
-// 使用named import避免类型问题
-const sqlite3Verbose = sqlite3.verbose();
+import { readFile, writeFile, mkdir } from 'fs/promises';
 
 export class SessionStorage {
   private db: Database | null = null;
   private projectPath: string;
   private ctxrDir: string;
+  private dbPath: string;
 
   constructor(projectPath: string = process.cwd()) {
     this.projectPath = projectPath;
     this.ctxrDir = join(projectPath, '.ctxr');
+    this.dbPath = join(this.ctxrDir, 'ctxr.db');
   }
 
   /**
    * 初始化数据库连接和表结构
    */
   async init(): Promise<void> {
-    // 确保.ctxr目录存在
+    // 确保.ctxr 目录存在
     await this.ensureDir(this.ctxrDir);
-    
-    const dbPath = join(this.ctxrDir, 'ctxr.db');
-    
-    this.db = await open({
-      filename: dbPath,
-      driver: sqlite3Verbose.Database
-    });
-
+      
+    // 初始化 sql.js
+    const SQL = await initSqlJs();
+      
+    // 尝试加载现有的数据库文件
+    try {
+      const dbData = await readFile(this.dbPath);
+      this.db = new SQL.Database(dbData);
+    } catch {
+      // 文件不存在，创建新数据库
+      this.db = new SQL.Database();
+    }
+  
     await this.createTables();
+    await this.saveDb();
+  }
+
+  /**
+   * 保存数据库到磁盘
+   */
+  private async saveDb(): Promise<void> {
+    if (!this.db) return;
+    
+    await this.ensureDir(this.ctxrDir);
+    const data = this.db.export();
+    await writeFile(this.dbPath, Buffer.from(data));
   }
 
   /**
@@ -51,7 +67,7 @@ export class SessionStorage {
   private async createTables(): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
 
-    await this.db.exec(`
+    this.db.exec(`
       CREATE TABLE IF NOT EXISTS sessions (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -91,12 +107,42 @@ export class SessionStorage {
   }
 
   /**
+   * 执行 SQL 查询并返回结果
+   */
+  private async execQuery(sql: string, params: any[] = []): Promise<any[]> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    const stmt = this.db.prepare(sql);
+    if (params.length > 0) {
+      stmt.bind(params);
+    }
+    try {
+      const results: any[] = [];
+      while (stmt.step()) {
+        results.push(stmt.getAsObject());
+      }
+      stmt.free();
+      return results;
+    } catch (error) {
+      stmt.free();
+      throw error;
+    }
+  }
+
+  /**
+   * 执行 SQL 语句（不返回结果）
+   */
+  private async execRun(sql: string, params: any[] = []): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    this.db.run(sql, params);
+    await this.saveDb();
+  }
+  /**
    * 保存会话快照
    */
   async saveSession(snapshot: SessionSnapshot): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    await this.db.run(
+    await this.execRun(
       `INSERT OR REPLACE INTO sessions (id, name, created_at, updated_at, source, data, tags, notes)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -116,68 +162,56 @@ export class SessionStorage {
    * 获取单个会话
    */
   async getSession(id: string): Promise<SessionSnapshot | null> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    const row = await this.db.get(
+    const rows = await this.execQuery(
       'SELECT data FROM sessions WHERE id = ?',
-      id
+      [id]
     );
 
-    if (!row) return null;
-    return JSON.parse(row.data) as SessionSnapshot;
+    if (rows.length === 0) return null;
+    return JSON.parse(rows[0].data as string) as SessionSnapshot;
   }
 
   /**
    * 列出所有会话
    */
   async listSessions(limit: number = 50, offset: number = 0): Promise<SessionSnapshot[]> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    const rows = await this.db.all(
+    const rows = await this.execQuery(
       `SELECT data FROM sessions 
        ORDER BY created_at DESC 
        LIMIT ? OFFSET ?`,
-      limit,
-      offset
+      [limit, offset]
     );
 
-    return rows.map(row => JSON.parse(row.data) as SessionSnapshot);
+    return rows.map(row => JSON.parse(row.data as string) as SessionSnapshot);
   }
 
   /**
    * 搜索会话
    */
   async searchSessions(query: string): Promise<SessionSnapshot[]> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    const rows = await this.db.all(
+    const rows = await this.execQuery(
       `SELECT data FROM sessions 
        WHERE name LIKE ? OR notes LIKE ?
        ORDER BY created_at DESC`,
-      `%${query}%`,
-      `%${query}%`
+      [`%${query}%`, `%${query}%`]
     );
 
-    return rows.map(row => JSON.parse(row.data) as SessionSnapshot);
+    return rows.map(row => JSON.parse(row.data as string) as SessionSnapshot);
   }
 
   /**
    * 删除会话
    */
   async deleteSession(id: string): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    await this.db.run('DELETE FROM sessions WHERE id = ?', id);
-    await this.db.run('DELETE FROM compressed_contexts WHERE original_session_id = ?', id);
+    await this.execRun('DELETE FROM sessions WHERE id = ?', [id]);
+    await this.execRun('DELETE FROM compressed_contexts WHERE original_session_id = ?', [id]);
   }
 
   /**
    * 创建标签
    */
   async createTag(tag: ContextTag): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    await this.db.run(
+    await this.execRun(
       `INSERT OR REPLACE INTO tags (id, name, description, session_ids, file_patterns, created_at, color)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -196,9 +230,7 @@ export class SessionStorage {
    * 获取所有标签
    */
   async listTags(): Promise<ContextTag[]> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    const rows = await this.db.all('SELECT * FROM tags ORDER BY created_at DESC');
+    const rows = await this.execQuery('SELECT * FROM tags ORDER BY created_at DESC');
     
     return rows.map(row => ({
       id: row.id,
@@ -215,19 +247,15 @@ export class SessionStorage {
    * 获取存储统计信息
    */
   async getStats(): Promise<{ totalSessions: number; storageSizeMB: number }> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    const countRow = await this.db.get('SELECT COUNT(*) as count FROM sessions');
-    
-    // 估算存储大小（SQLite不直接提供，这里简化处理）
-    const sizeRow = await this.db.get(
+    const countRows = await this.execQuery('SELECT COUNT(*) as count FROM sessions');
+    const sizeRows = await this.execQuery(
       "SELECT SUM(LENGTH(data)) as total_bytes FROM sessions"
     );
-    
-    const totalBytes = sizeRow?.total_bytes || 0;
-    
+      
+    const totalBytes = sizeRows[0]?.total_bytes || 0;
+      
     return {
-      totalSessions: countRow.count,
+      totalSessions: countRows[0]?.count || 0,
       storageSizeMB: parseFloat((totalBytes / 1024 / 1024).toFixed(2))
     };
   }
@@ -237,7 +265,7 @@ export class SessionStorage {
    */
   async close(): Promise<void> {
     if (this.db) {
-      await this.db.close();
+      this.db.close();
       this.db = null;
     }
   }

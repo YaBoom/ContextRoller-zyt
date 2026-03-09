@@ -25,6 +25,8 @@ export interface Message {
     tool_calls?: unknown[];
     tokens?: number;
     files_modified?: string[];
+    merged_count?: number;
+  [key: string]: unknown;
   };
 }
 
@@ -36,7 +38,7 @@ export interface SessionSnapshot {
   name: string;
   created_at: number;
   updated_at: number;
-  source: 'claude-code' | 'cursor' | 'aider' | 'manual';
+  source: string;
   messages: Message[];
   context_window: {
     max_tokens: number;

@@ -13,7 +13,7 @@
  */
 
 import { readFile, readdir, stat } from 'fs/promises';
-import { join, homedir } from 'os';
+import { homedir } from 'os';
 import { join as pathJoin } from 'path';
 import { 
   AITool, 

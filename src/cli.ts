@@ -1,4 +1,4 @@
-/#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * CLI - ContextRoller 命令行界面
  * 
@@ -16,7 +16,7 @@ import ora from 'ora';
 import { SessionStorage } from './core/storage.js';
 import { SessionParser } from './core/parser.js';
 import { ContextCompressor } from './core/compressor.js';
-import { SessionSnapshot, ContextHealthReport } from './core/types.js';
+import { SessionSnapshot } from './core/types.js';
 import { randomUUID } from 'crypto';
 import { existsSync } from 'fs';
 import { resolve, join } from 'path';
@@ -276,6 +276,57 @@ program
       
     } catch (error) {
       spinner.fail(chalk.red(`压缩失败: ${error}`));
+      process.exit(1);
+    }
+  });
+
+// restore 命令
+program
+  .command('restore <name>')
+  .description('恢复指定会话的上下文')
+  .action(async (name) => {
+    if (!checkInitialized(process.cwd())) {
+      console.log(chalk.yellow('⚠️  请先运行 `ctxr init` 初始化项目'));
+      return;
+    }
+
+    const spinner = ora('恢复会话...').start();
+    
+    try {
+      const storage = await getStorage(process.cwd());
+      const sessions = await storage.searchSessions(name);
+      
+      if (sessions.length === 0) {
+        spinner.fail(chalk.yellow(`未找到会话: ${name}`));
+        return;
+      }
+      
+      const session = sessions[0];
+      const compressor = new ContextCompressor();
+      const compressed = compressor.compress(session, {
+        level: 'semantic',
+        preserveLastN: 10
+      });
+      
+      await storage.close();
+      
+      spinner.succeed(chalk.green(`会话已恢复: ${chalk.bold(session.name)}`));
+      console.log(chalk.gray(`\n📝 会话摘要:\n${compressed.summary}`));
+      console.log(chalk.gray(`\n🔑 关键决策点:`));
+      compressed.key_decisions.forEach((d, i) => {
+        console.log(chalk.gray(`  ${i + 1}. ${d}`));
+      });
+      
+      console.log(chalk.bold('\n💬 最近消息:\n'));
+      session.messages.slice(-5).forEach((m) => {
+        const role = m.role === 'user' ? chalk.blue('User') : 
+                     m.role === 'assistant' ? chalk.green('AI') : chalk.gray('System');
+        const preview = m.content.slice(0, 100).replace(/\n/g, ' ');
+        console.log(`${role}: ${preview}${m.content.length > 100 ? '...' : ''}`);
+      });
+      
+    } catch (error) {
+      spinner.fail(chalk.red(`恢复失败: ${error}`));
       process.exit(1);
     }
   });
