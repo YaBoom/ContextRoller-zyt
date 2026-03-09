@@ -25,20 +25,21 @@
   "author": "YaBoom",
   "license": "MIT",
   "dependencies": {
-    "commander": "^13.0.0",
+    "canvas": "^3.2.1",
     "chalk": "^5.4.0",
+    "commander": "^13.0.0",
+    "globby": "^14.1.0",
     "ora": "^8.2.0",
     "sql.js": "^1.10.3",
-    "zod": "^3.24.0",
-    "globby": "^14.1.0",
-    "tiktoken": "^1.0.20"
+    "tiktoken": "^1.0.20",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@types/sql.js": "^1.4.9",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.0.0",
-    "@types/sql.js": "^1.4.9"
+    "vitest": "^3.0.0"
   },
   "engines": {
     "node": ">=18"
